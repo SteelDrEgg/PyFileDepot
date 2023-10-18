@@ -8,6 +8,7 @@ class initConfig:
     port: int
     static_folder: str = None
     template_folder: str = None
+    map_config: str = "config.conf"
 
     _config: configparser.ConfigParser
 
@@ -50,6 +51,9 @@ class initConfig:
 
         self.static_folder = self.static_folder.format(template=template)
         self.template_folder = self.template_folder.format(template=template)
+
+        if (temp := self._getValueIfAvailable(["server", "file_map_config"])) and temp:
+            self.map_config = temp
 
     def _getValueIfAvailable(self, key, errMsg: str = None):
         try:

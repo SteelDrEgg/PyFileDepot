@@ -2,11 +2,13 @@ import flask
 from flask import Flask
 from flask import render_template, jsonify
 
-from util import initConfig
+from util import initConfig, mappingTable
 
 config = initConfig()
+mapTable = mappingTable(config.map_config)
 
 app = Flask(__name__, static_folder=config.static_folder, template_folder=config.template_folder)
+
 
 @app.route('/')
 def root():
@@ -16,8 +18,7 @@ def root():
 
 @app.route('/<path:path>')
 def catch_all(path):
-
-    return 'Catchall route: %s' % path
+    return jsonify(mapTable.getValFromPath(path))
 
 
 if __name__ == '__main__':
