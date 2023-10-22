@@ -5,6 +5,16 @@
     <title>Title</title>
 </head>
 <body>
-<h1>Hello</h1>
+<h1>List ndex</h1>
+
+<div>
+    {% for item in items %}
+    <div>
+        <p style="float: left">{{ item["name"] }}</p>
+        <p style="float: left">{{ item["type"] }}</p>
+    </div>
+    {% endfor %}
+</div>
+
 </body>
 </html>

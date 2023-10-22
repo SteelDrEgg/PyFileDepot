@@ -1,7 +1,8 @@
 import flask
 from flask import Flask
-from flask import render_template, jsonify
+from flask import render_template, jsonify, redirect, send_file
 
+import util
 from util import initConfig, mappingTable
 
 config = initConfig()
@@ -12,13 +13,24 @@ app = Flask(__name__, static_folder=config.static_folder, template_folder=config
 
 @app.route('/')
 def root():
-    # 将捕获到的路径参数传递给视图函数
+    page = mapTable.root
     return 'root'
 
 
 @app.route('/<path:path>')
 def catch_all(path):
-    return jsonify(mapTable.getValFromPath(path))
+    infos, args = mapTable.getPositionFromPath(path)
+    infos = util.fileOrFolder2ListOfAddr(infos)
+
+    if isinstance(infos, list):
+        return "folder " + str(infos) + str(args)
+    else:
+        return "file " + str(infos) + str(args)
+    # position = util.addArgs2position(path, args)
+    # if "://" in position:
+    #     return redirect(position)
+    # else:
+    #     return send_file(position)
 
 
 if __name__ == '__main__':

@@ -1,2 +1,2 @@
 from .initConfig import initConfig
-from .mapConfig import mappingTable
+from .mapConfig import mappingTable, addArgs2position, fileOrFolder2ListOfAddr

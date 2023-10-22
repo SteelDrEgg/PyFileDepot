@@ -5,7 +5,7 @@ You might need modifications to make it working on windows
 
 import os
 from collections import defaultdict
-import json
+# import json
 import re
 import fnmatch
 import logging
@@ -13,41 +13,45 @@ import logging
 logger = logging.getLogger("mainLogger")
 
 
-class fileMap:
-    name: str
-    position: str
-
-    def __int__(self, name, position):
-        self.name = name
-        self.position = position
-
-
-class folder:
-    name: str
-    children: dict
-
-    def __int__(self, name):
-        self.name = name
-
-
 class mappingTable:
     root: dict
     _temp: dict
 
+    '''
+    Root structure:
+    The end of each branch is real/physical position of the file
+    
+    root
+    |-sub1
+    |   |-real position
+    |
+    |-sub2
+        |-ssub1
+        |   |-real position
+        |
+        |-ssub2
+            |-real position
+    '''
+
     # _holderPattern: str = r"(.*?)%([^%]*)%([^%]*)$"
 
     def __init__(self, path: str):
+        '''
+        :param path: path of the config file
+        '''
         file = open(path, "r")
         self.root = self._tree()
         while line := file.readline():
             line = line.replace(os.linesep, "")
-            physical, virtual = line.split(":")
+            if "://" in line:
+                proto, content = line.split("://")
+                physical, virtual = content.split(":")
+                physical = proto + "://" + physical
+            else:
+                physical, virtual = line.split(":")
             virtual = virtual.split("/")
-            # for pt in (virtual[1:] + [physical]):
-            #     if pt not in dict(self.root).keys():
             temp = self._put(virtual[1:] + [physical])
             self.root = self._merge(temp, self.root)
-        # print(json.dumps(self._tree2dict(self.root), indent=4))
 
     def _tree(self):
         # Credit to https://gist.github.com/hrldcpr/2012250
@@ -63,10 +67,6 @@ class mappingTable:
             t[str(sets[0])]
             return dict(t)
 
-    def _tree2dict(self, t):
-        # Credit to https://gist.github.com/hrldcpr/2012250
-        return {k: self._tree2dict(t[k]) for k in t}
-
     def _merge(self, a: dict, b: dict, path=[]):
         # Credit to https://stackoverflow.com/a/7205107
         for key in b:
@@ -79,7 +79,11 @@ class mappingTable:
                 a[key] = b[key]
         return a
 
-    def getValFromPath(self, path):
+    def getPositionFromPath(self, path):
+        '''
+        :param path: url accessed
+        :return: ( matched node from file tree :dict ), ( args in url which inside %% :dict )
+        '''
         path = path.split("/")
         temp = self.root
         args = {}
@@ -88,20 +92,19 @@ class mappingTable:
                 if "%" in ele:
                     # Match everything in %%
                     placeHolders = re.findall(r'%(.*?)%', ele)
-                    print(ele)
                     if not placeHolders:
                         logger.error("config error at " + ele)
                     # Replace %% with * and do regex
                     compiledPattern = re.sub(r'%(.*?)%', r'(.*?)', ele)
-                    if compiledPattern != r"(.*?)": # If it's like this: "%arg%"
+                    if compiledPattern != r"(.*?)":  # If it's like this: "%arg%"
                         matches = re.match(compiledPattern, pt)
                         if not matches:
                             continue
-                        extracted_values = matches.groups()
+                        extracted = matches.groups()
                     else:
-                        extracted_values = [pt]
-                    if extracted_values:
-                        args.update(dict(zip(placeHolders, extracted_values)))
+                        extracted = [pt]
+                    if extracted:
+                        args.update(dict(zip(placeHolders, extracted)))
                         temp = temp[ele]
                         break
                 elif "*" in ele or "?" in ele:
@@ -112,8 +115,29 @@ class mappingTable:
                     if ele == pt:
                         temp = temp[ele]
                         break
-        possibles = list(temp.keys())
-        if len(possibles) == 1:
-            return possibles[0], args
-        else:
-            return False, args
+        return temp, args
+
+
+def fileOrFolder2ListOfAddr(obj: dict):
+    '''
+    :param obj: first return value from mappingTable.getPositionFromPath
+    :return: If File, return (real position):str ; If Folder, return (file names):list
+    '''
+    for key in obj:
+        print(len(obj[key]))
+        if len(obj[key]) != 0:
+            return list(obj)
+    return list(obj)[0]
+
+
+def addArgs2position(position, args):
+    def replace(match):
+        return str(args.get(match.group(1)))
+
+    return re.sub(r'%(\S+)%', replace, position)
+
+
+def selectLocalFiles(template: str, args: dict):
+    if args:
+        path = addArgs2position(template, args)
+        os.
