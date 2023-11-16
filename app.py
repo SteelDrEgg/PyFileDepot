@@ -1,6 +1,7 @@
 import flask
 from flask import Flask
-from flask import render_template, jsonify, redirect, send_file
+from flask import render_template, jsonify, redirect, send_file, request
+import re, glob, os
 
 import util
 from util import initConfig, mappingTable
@@ -17,21 +18,58 @@ def root():
     return 'root'
 
 
+def not_found():
+    return "404 not found", 404
+
+
 @app.route('/<path:path>')
 def catch_all(path):
-    infos, args = mapTable.getPositionFromPath(path)
-    infos = util.fileOrFolder2ListOfAddr(infos)
+    rawInfos, args = mapTable.getPositionFromPath(path)
+
+    if not rawInfos:
+        return not_found()
+
+    infos = util.fileOrFolder2ListOfAddr(rawInfos)
 
     if isinstance(infos, list):
-        return "folder " + str(infos) + str(args)
+        # Virtual path folder
+        # return render_template("index.html", items=infos)
+        fileList = []
+        for vPath in infos:
+            if "%" in vPath:
+                realPath = next(iter(rawInfos[vPath]))
+                realPath = re.sub(r'%[^%]+%', '*', realPath)
+                for file in glob.glob(realPath):
+                    if not os.path.isdir(file):
+                        file = file.split("/")[-1]
+                    # file = file.split("/")[-1]
+                        fileList.append({"name": file, "type": "file"})
+            elif "*" in vPath:
+                realPath = rawInfos[vPath]
+                for file in glob.glob(realPath):
+                    if not os.path.isdir(file):
+                        file = file.split("/")[-1]
+                        fileList.append({"name": file, "type": "file"})
+            else:
+                if len(rawInfos[vPath][next(iter(rawInfos[vPath].keys()))]) == 0:
+                    # This is a file, because it has only one child: physical location
+                    fileList.append({"name": vPath, "type": "file"})
+                else:
+                    fileList.append({"name": vPath, "type": "folder"})
+        return render_template("index.html",items=fileList, url=request.url)
     else:
-        return "file " + str(infos) + str(args)
-    # position = util.addArgs2position(path, args)
-    # if "://" in position:
-    #     return redirect(position)
-    # else:
-    #     return send_file(position)
+        # Real path folder
+        location = util.selectLocalFiles(infos, args)
+        if "://" in location:
+            return redirect(location)
+        elif isinstance(location, list):
+            # Physical folder
+            return [i.split("/")[-1] for i in location]
+        else:
+            return send_file(location)
 
 
 if __name__ == '__main__':
     app.run(host=config.ip, port=config.port, debug=True)
+# TODO: add support on 404 e.g: /txts/not_exist
+# TODO: add support for folder e.g: /folder/:/

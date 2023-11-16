@@ -7,7 +7,7 @@ import os
 from collections import defaultdict
 # import json
 import re
-import fnmatch
+import fnmatch, glob
 import logging
 
 logger = logging.getLogger("mainLogger")
@@ -81,6 +81,7 @@ class mappingTable:
 
     def getPositionFromPath(self, path):
         '''
+        Use a set of rules to find the node from the tree
         :param path: url accessed
         :return: ( matched node from file tree :dict ), ( args in url which inside %% :dict )
         '''
@@ -115,29 +116,54 @@ class mappingTable:
                     if ele == pt:
                         temp = temp[ele]
                         break
+
+        if temp == self.root:
+            return False, None
         return temp, args
 
 
 def fileOrFolder2ListOfAddr(obj: dict):
     '''
+
     :param obj: first return value from mappingTable.getPositionFromPath
     :return: If File, return (real position):str ; If Folder, return (file names):list
     '''
     for key in obj:
-        print(len(obj[key]))
         if len(obj[key]) != 0:
             return list(obj)
     return list(obj)[0]
 
 
 def addArgs2position(position, args):
+    '''
+    Fill template with args
+    :param position: template with %arg%
+    :param args: dict of args {name:value}
+    :return: physical location on machine
+    '''
     def replace(match):
-        return str(args.get(match.group(1)))
+        return str(args.get(match.group(1), match.group(0).replace("%", "")))
 
     return re.sub(r'%(\S+)%', replace, position)
 
 
-def selectLocalFiles(template: str, args: dict):
+def selectLocalFiles(template: str, args: dict = None):
+    '''
+    Turn virtual path into real local path
+    :param template: template with %arg% or * or plain location
+    :param args: dict of args {name:value}
+    :return: physical location on machine
+    '''
     if args:
         path = addArgs2position(template, args)
-        os.
+        if os.path.exists(path):
+            if os.path.isdir(path):
+                return os.listdir(path)
+            else:
+                return path
+        else:
+            logger.error(f"Invalid path '{template}' configured")
+    elif "*" in template or "?" in template:
+        return glob.glob(template)
+    else:
+        return template

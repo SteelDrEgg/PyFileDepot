@@ -5,16 +5,16 @@
     <title>Title</title>
 </head>
 <body>
-<h1>List ndex</h1>
+<h1>List index</h1>
 
-<div>
+<ul>
     {% for item in items %}
-    <div>
-        <p style="float: left">{{ item["name"] }}</p>
-        <p style="float: left">{{ item["type"] }}</p>
-    </div>
+    <li style="list-style-type: none">
+        <a href="{{ url }}/{{ item['name'] }}" style="display:inline">{{ item["name"] }}</a>
+        <p style="display:inline">{{ item["type"] }}</p>
+    </li>
     {% endfor %}
-</div>
+</ul>
 
 </body>
 </html>
