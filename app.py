@@ -18,8 +18,8 @@ def root():
     return 'root'
 
 
-def not_found():
-    return "404 not found", 404
+def not_found(path):
+    return render_template("404.html", path="/"+path), 404
 
 
 @app.route('/<path:path>')
@@ -27,11 +27,9 @@ def catch_all(path):
     rawInfos, args = mapTable.getPositionFromPath(path)
 
     if not rawInfos:
-        return not_found()
+        return not_found(path)
 
     infos = util.fileOrFolder2ListOfAddr(rawInfos)
-
-
 
     if isinstance(infos, list):
         # Virtual path folder
@@ -44,7 +42,7 @@ def catch_all(path):
                 for file in glob.glob(realPath):
                     if not os.path.isdir(file):
                         file = file.split("/")[-1]
-                    # file = file.split("/")[-1]
+                        # file = file.split("/")[-1]
                         fileList.append({"name": file, "type": "file"})
             elif "*" in vPath:
                 realPath = rawInfos[vPath]
@@ -58,7 +56,7 @@ def catch_all(path):
                     fileList.append({"name": vPath, "type": "file"})
                 else:
                     fileList.append({"name": vPath, "type": "folder"})
-        return render_template("index.html",items=fileList, url=request.url)
+        return render_template("index.html", items=fileList, url=request.url)
     else:
         # Real path folder
         location = util.selectLocalFiles(infos, args)
@@ -71,7 +69,7 @@ def catch_all(path):
             else:
                 return send_file(location)
         else:
-            return not_found()
+            return not_found(path)
 
 
 if __name__ == '__main__':
