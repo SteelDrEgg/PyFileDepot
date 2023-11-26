@@ -88,8 +88,8 @@ class mappingTable:
         path = path.split("/")
         temp = self.root
         args = {}
-        for pt in path:
-            for ele in temp:
+        for pt in path:  # Loop through each part of url
+            for ele in temp:  # Loop through child under this node and see does template match url, starting from root
                 if "%" in ele:
                     # Match everything in %%
                     placeHolders = re.findall(r'%(.*?)%', ele)
@@ -116,6 +116,8 @@ class mappingTable:
                     if ele == pt:
                         temp = temp[ele]
                         break
+                    if pt != "":
+                        return False, None
 
         if temp == self.root:
             return False, None
@@ -141,6 +143,7 @@ def addArgs2position(position, args):
     :param args: dict of args {name:value}
     :return: physical location on machine
     '''
+
     def replace(match):
         return str(args.get(match.group(1), match.group(0).replace("%", "")))
 

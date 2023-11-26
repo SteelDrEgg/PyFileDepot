@@ -31,6 +31,8 @@ def catch_all(path):
 
     infos = util.fileOrFolder2ListOfAddr(rawInfos)
 
+
+
     if isinstance(infos, list):
         # Virtual path folder
         # return render_template("index.html", items=infos)
@@ -60,16 +62,18 @@ def catch_all(path):
     else:
         # Real path folder
         location = util.selectLocalFiles(infos, args)
-        if "://" in location:
-            return redirect(location)
-        elif isinstance(location, list):
-            # Physical folder
-            return [i.split("/")[-1] for i in location]
+        if location:
+            if "://" in location:
+                return redirect(location)
+            elif isinstance(location, list):
+                # Physical folder
+                return [i.split("/")[-1] for i in location]
+            else:
+                return send_file(location)
         else:
-            return send_file(location)
+            return not_found()
 
 
 if __name__ == '__main__':
     app.run(host=config.ip, port=config.port, debug=True)
-# TODO: add support on 404 e.g: /txts/not_exist
 # TODO: add support for folder e.g: /folder/:/
